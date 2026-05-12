@@ -14,9 +14,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id">
-      <body className="bg-slate-100 text-slate-900">
+      <body className="bg-[#f6f8fb] text-slate-950 antialiased">
         <Navbar />
-        <main className="mx-auto max-w-7xl p-4">{children}</main>
+        <main className="mx-auto w-full max-w-7xl px-4 py-5 pb-24 sm:px-6 lg:px-8">
+          {children}
+        </main>
       </body>
     </html>
   );

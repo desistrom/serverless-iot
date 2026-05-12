@@ -10,6 +10,16 @@ const supabase = createClient(
 
 const DEVICE_ID = process.env.DEVICE_ID!;
 
+type SensorReading = {
+  id: string;
+  device_id: string;
+  tds: number;
+  water_temp: number;
+  air_temp: number;
+  humidity: number;
+  light_intensity: number;
+};
+
 export async function GET() {
   try {
     const { data: sensor, error: sensorError } = await supabase
@@ -119,7 +129,7 @@ export async function GET() {
 }
 
 function createAlert(
-  sensor: any,
+  sensor: SensorReading,
   alertType: string,
   title: string,
   message: string,

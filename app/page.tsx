@@ -2,21 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { supabase, DEVICE_ID } from "@/src/lib/supabase";
-import SensorPollingCards from "@/src/components/SensorCard";
 import RelayControl from "@/src/components/RelayControl";
 import RealtimeSensorCards from "@/src/components/RealtimeSensorCards";
-
-type SensorReading = {
-  tds: number;
-  water_temp: number;
-  air_temp: number;
-  humidity: number;
-  light_intensity: number;
-  created_at: string;
-};
+import { Gauge, Power } from "lucide-react";
 
 export default function OverviewPage() {
-  const [sensor, setSensor] = useState<SensorReading | null>(null);
   const [mode, setMode] = useState<"manual" | "auto">("manual");
 
   async function fetchMode() {
@@ -42,89 +32,66 @@ export default function OverviewPage() {
   }
 
   useEffect(() => {
-    fetchMode();
-  }, []);
+    const timer = window.setTimeout(() => {
+      fetchMode();
+    }, 0);
 
-  async function fetchLatestSensor() {
-    const { data } = await supabase
-      .from("sensor_readings")
-      .select("*")
-      .eq("device_id", DEVICE_ID)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
-
-    if (data) setSensor(data);
-  }
-
-  useEffect(() => {
-    fetchLatestSensor();
-
-    const channel = supabase
-      .channel("sensor-realtime")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "sensor_readings",
-          filter: `device_id=eq.${DEVICE_ID}`,
-        },
-        (payload) => {
-          setSensor(payload.new as SensorReading);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => window.clearTimeout(timer);
   }, []);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Overview Sensor Realtime</h1>
+    <div className="space-y-5">
+      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
+              <Gauge size={17} />
+              Dashboard Realtime
+            </p>
+            <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+              Overview Sensor Hidroponik
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+              Pantau kondisi nutrisi, suhu, kelembapan, cahaya, dan kontrol relay
+              dari satu layar yang siap dipakai di mobile.
+            </p>
+          </div>
 
-      <SensorPollingCards/>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+            <p className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-700">
+              <Power size={16} />
+              Mode Kontrol
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => updateMode("manual")}
+                className={`min-h-11 rounded-lg px-4 text-sm font-bold transition ${
+                  mode === "manual"
+                    ? "bg-slate-950 text-white shadow-sm"
+                    : "bg-white text-slate-600 ring-1 ring-slate-200"
+                }`}
+              >
+                Manual
+              </button>
+
+              <button
+                onClick={() => updateMode("auto")}
+                className={`min-h-11 rounded-lg px-4 text-sm font-bold transition ${
+                  mode === "auto"
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "bg-white text-slate-600 ring-1 ring-slate-200"
+                }`}
+              >
+                Otomatis
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <RealtimeSensorCards />
 
       <RelayControl />
-
-      <p className="text-sm text-slate-500">
-        Update terakhir: {sensor?.created_at ?? "-"}
-      </p>
-      <div className="rounded-2xl bg-white p-5 shadow">
-        <h2 className="mb-4 text-xl font-bold">Mode Kontrol</h2>
-
-        <div className="flex gap-3">
-            <button
-            onClick={() => updateMode("manual")}
-            className={`rounded-xl px-5 py-3 font-bold ${
-                mode === "manual"
-                ? "bg-blue-600 text-white"
-                : "bg-slate-100 text-slate-700"
-            }`}
-            >
-            Manual
-            </button>
-
-            <button
-            onClick={() => updateMode("auto")}
-            className={`rounded-xl px-5 py-3 font-bold ${
-                mode === "auto"
-                ? "bg-green-600 text-white"
-                : "bg-slate-100 text-slate-700"
-            }`}
-            >
-            Otomatis
-            </button>
-        </div>
-
-        <p className="mt-3 text-sm text-slate-500">
-            Mode aktif: <b>{mode === "manual" ? "Manual" : "Otomatis"}</b>
-        </p>
-        </div>
     </div>
   );
 }

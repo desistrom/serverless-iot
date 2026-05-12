@@ -1,19 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { supabase, DEVICE_ID } from "@/src/lib/supabase";
-import {
-  LineChart,
-  Line,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { LineChart as LineChartIcon } from "lucide-react";
+import type { SensorHistory } from "@/src/components/HistoryChart";
+
+const HistoryChart = dynamic(() => import("@/src/components/HistoryChart"), {
+  ssr: false,
+  loading: () => (
+    <div className="grid h-[320px] place-items-center text-sm font-medium text-slate-500 sm:h-[420px]">
+      Memuat grafik...
+    </div>
+  ),
+});
 
 export default function HistoryPage() {
-  const [data, setData] = useState<any[]>([]);
+  const [data, setData] = useState<SensorHistory[]>([]);
 
   async function fetchHistory() {
     const { data } = await supabase
@@ -27,30 +30,30 @@ export default function HistoryPage() {
   }
 
   useEffect(() => {
-    fetchHistory();
+    const timer = window.setTimeout(() => {
+      fetchHistory();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, []);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Grafik Riwayat Sensor</h1>
+    <div className="space-y-5">
+      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+        <p className="flex items-center gap-2 text-sm font-semibold text-indigo-700">
+          <LineChartIcon size={17} />
+          Riwayat Sensor
+        </p>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">
+          Grafik Riwayat Sensor
+        </h1>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
+          Tren 100 data terakhir untuk nutrisi, suhu, kelembapan, dan cahaya.
+        </p>
+      </section>
 
-      <div className="rounded-2xl bg-white p-5 shadow">
-        <ResponsiveContainer width="100%" height={400}>
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              dataKey="created_at"
-              tickFormatter={(v) => new Date(v).toLocaleTimeString("id-ID")}
-            />
-            <YAxis />
-            <Tooltip />
-            <Line type="monotone" dataKey="tds" name="TDS" />
-            <Line type="monotone" dataKey="water_temp" name="Suhu Air" />
-            <Line type="monotone" dataKey="air_temp" name="Suhu Udara" />
-            <Line type="monotone" dataKey="humidity" name="Kelembapan" />
-            <Line type="monotone" dataKey="light_intensity" name="Cahaya" />
-          </LineChart>
-        </ResponsiveContainer>
+      <div className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm sm:p-5">
+        <HistoryChart data={data} />
       </div>
     </div>
   );

@@ -2,6 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { supabase, DEVICE_ID } from "@/src/lib/supabase";
+import {
+  Activity,
+  Droplets,
+  Gauge,
+  Sun,
+  Thermometer,
+  TriangleAlert,
+} from "lucide-react";
 
 type SensorReading = {
   id: string;
@@ -34,6 +42,8 @@ type CardItem = {
   unit: string;
   min?: number;
   max?: number;
+  accent: string;
+  icon: typeof Gauge;
 };
 
 export default function RealtimeSensorCards() {
@@ -67,7 +77,9 @@ export default function RealtimeSensorCards() {
   }
 
   useEffect(() => {
-    fetchInitialData();
+    const timer = window.setTimeout(() => {
+      fetchInitialData();
+    }, 0);
 
     const channel = supabase
       .channel(`sensor-readings-${DEVICE_ID}`)
@@ -86,6 +98,7 @@ export default function RealtimeSensorCards() {
       .subscribe();
 
     return () => {
+      window.clearTimeout(timer);
       supabase.removeChannel(channel);
     };
   }, []);
@@ -99,6 +112,8 @@ export default function RealtimeSensorCards() {
         unit: "ppm",
         min: threshold?.min_tds,
         max: threshold?.max_tds,
+        accent: "text-emerald-700 bg-emerald-50",
+        icon: Gauge,
       },
       {
         key: "water_temp",
@@ -107,6 +122,8 @@ export default function RealtimeSensorCards() {
         unit: "°C",
         min: threshold?.min_water_temp,
         max: threshold?.max_water_temp,
+        accent: "text-sky-700 bg-sky-50",
+        icon: Droplets,
       },
       {
         key: "air_temp",
@@ -115,6 +132,8 @@ export default function RealtimeSensorCards() {
         unit: "°C",
         min: threshold?.min_air_temp,
         max: threshold?.max_air_temp,
+        accent: "text-rose-700 bg-rose-50",
+        icon: Thermometer,
       },
       {
         key: "humidity",
@@ -123,6 +142,8 @@ export default function RealtimeSensorCards() {
         unit: "%",
         min: threshold?.min_humidity,
         max: threshold?.max_humidity,
+        accent: "text-indigo-700 bg-indigo-50",
+        icon: Activity,
       },
       {
         key: "light_intensity",
@@ -131,34 +152,53 @@ export default function RealtimeSensorCards() {
         unit: "",
         min: threshold?.min_light_intensity,
         max: threshold?.max_light_intensity,
+        accent: "text-amber-700 bg-amber-50",
+        icon: Sun,
       },
     ],
     [sensor, threshold]
   );
 
   if (loading) {
-    return <p className="text-slate-500">Memuat data sensor...</p>;
+    return (
+      <div className="rounded-lg border border-slate-200 bg-white p-5 text-sm font-medium text-slate-500 shadow-sm">
+        Memuat data sensor...
+      </div>
+    );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+    <section className="space-y-3">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-slate-950">Sensor Aktif</h2>
+          <p className="text-sm text-slate-500">Nilai terakhir dibandingkan threshold.</p>
+        </div>
+        <p className="hidden text-xs font-medium text-slate-400 sm:block">
+          {sensor?.created_at
+            ? new Date(sensor.created_at).toLocaleString("id-ID")
+            : "-"}
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {cards.map((card) => (
           <SensorCard key={card.key} item={card} />
         ))}
       </div>
 
-      <p className="text-sm text-slate-500">
+      <p className="text-xs font-medium text-slate-500 sm:hidden">
         Update terakhir:{" "}
         {sensor?.created_at
           ? new Date(sensor.created_at).toLocaleString("id-ID")
           : "-"}
       </p>
-    </div>
+    </section>
   );
 }
 
 function SensorCard({ item }: { item: CardItem }) {
+  const Icon = item.icon;
   const value = typeof item.value === "number" ? item.value : null;
 
   const isWarning =
@@ -168,26 +208,35 @@ function SensorCard({ item }: { item: CardItem }) {
 
   return (
     <div
-      className={`rounded-2xl border p-5 shadow transition ${
+      className={`rounded-lg border p-4 shadow-sm transition ${
         isWarning
-          ? "border-red-300 bg-red-50 text-red-800"
+          ? "border-red-200 bg-red-50 text-red-800"
           : "border-slate-200 bg-white text-slate-900"
       }`}
     >
-      <p className="text-sm font-medium opacity-70">{item.title}</p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-slate-500">{item.title}</p>
+        <span
+          className={`grid size-9 place-items-center rounded-lg ${
+            isWarning ? "bg-red-100 text-red-700" : item.accent
+          }`}
+        >
+          {isWarning ? <TriangleAlert size={18} /> : <Icon size={18} />}
+        </span>
+      </div>
 
-      <h2 className="mt-2 text-3xl font-bold">
+      <h3 className="mt-4 text-3xl font-bold tracking-tight">
         {item.value}{" "}
-        {item.unit && <span className="text-base font-medium">{item.unit}</span>}
-      </h2>
+        {item.unit && <span className="text-base font-semibold text-slate-500">{item.unit}</span>}
+      </h3>
 
-      <p className="mt-3 text-xs opacity-70">
+      <p className="mt-3 text-xs font-medium text-slate-500">
         Normal: {item.min ?? "-"} - {item.max ?? "-"} {item.unit}
       </p>
 
       {isWarning && (
-        <p className="mt-2 text-sm font-semibold">
-          ⚠️ Nilai melewati threshold
+        <p className="mt-2 text-sm font-bold">
+          Nilai melewati threshold
         </p>
       )}
     </div>
